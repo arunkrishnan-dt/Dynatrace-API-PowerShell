@@ -1,4 +1,4 @@
-﻿$dynatracetenany = "https://xxxxxx.live.dynatrace.com"
+﻿$dynatracetenany = "https://xxxxxxxx.live.dynatrace.com"
 $dynatracetoken = "<your-api-token>"
 $dynatracetenany
 $dynatracetoken
