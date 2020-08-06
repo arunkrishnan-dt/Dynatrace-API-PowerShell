@@ -1,8 +1,13 @@
-﻿#Get Host List
+#################################################################
+﻿# Use this script to check host readiness before OneAgent Update
+#                 And
+# Host Status after OneAgent Update
+##################################################################
 $dt_tenancy = "https://xxxxxx.live.dynatrace.com"
 $dt_api_token = "<your-api-token>"
 $report_csv_path = "<your-csv-path>"
 
+# NOTE: Filter belwo API calls with ManagementZones where available
 $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
 $headers.Add("Authorization", "Api-Token "+ $dt_api_token)
 $hostList = Invoke-RestMethod $dt_tenancy'/api/v1/entity/infrastructure/hosts?relateiveTime=2hours&includeDetails=false&showMonitoringCandidates=false' -Method 'GET' -Headers $headers -Body $body
