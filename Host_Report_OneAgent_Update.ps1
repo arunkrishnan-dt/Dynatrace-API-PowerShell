@@ -122,8 +122,7 @@ foreach ($monitoredHost in $hostListHash.GetEnumerator()){
     Foreach ($KeyB in ($hostMemoryHash.GetEnumerator() | Where-Object {$_.Name -eq $monitoredHost.Name})){$memory =$KeyB.Value}
     Foreach ($KeyC in ($hostOptDiskFreeHash.GetEnumerator() | Where-Object {$_.Name -eq $monitoredHost.Name})){$optFeeDisk =$KeyC.Value}
     Foreach ($KeyD in ($hostVarDiskFreeHash.GetEnumerator() | Where-Object {$_.Name -eq $monitoredHost.Name})){$varFreeDisk =$KeyD.Value}
-
-    $TargetProperties = @{Name=$Machine}
+  
     $TargetObject = New-Object PSObject -Property @{ id =$monitoredHost.Name ; Name = $monitoredHost.Value ; 'CPU_Usage(%)' = $cpu ; 'Memory_Usage(%)' = $memory ; 'Opt_Disk_Available(GB)' = $optFeeDisk ; 'Var_Disk_Available(GB)' = $varFreeDisk }
     $report +=  $TargetObject
     }
