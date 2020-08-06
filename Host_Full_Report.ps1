@@ -68,4 +68,4 @@ foreach ($monitoredHost in $hostHash.GetEnumerator()){
     $TargetObject = New-Object PSObject -Property @{ id =$monitoredHost.Name ; Name = $monitoredHost.Value ; CPU_Usage = $cpu ; Memory_Usage = $memory }  
     $report +=  $TargetObject
     }
-$report | Export-Csv -Path "C:\Users\arun.krishnan\OneDrive - Dynatrace\Projects\Powershell\host-report.csv"
+$report | Export-Csv -Path "<report path>"
