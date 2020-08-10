@@ -74,17 +74,15 @@ foreach ($cpuOther in $hostCPUOther.dataResult.dataPoints.PSObject.Properties){
 
 #Total CPU
 $hostTotalCPUHash = @{}
-Foreach ($entry in $hostCPUSystemHash.GetEnumerator()){
-    Foreach ($Key1 in ($hostCPUUserHash.GetEnumerator() | Where-Object {$_.Name -eq $entry.Name})){$usercpuval=$Key1.Value}
-    Foreach ($Key2 in ($hostCPUOtherHash.GetEnumerator() | Where-Object {$_.Name -eq $entry.Name})){$othercpuval=$Key2.Value}
-    $totalCPUval = $entry.Value + $usercpuval + $othercpuval
+Foreach ($entry in $hostCPUSystemHash.GetEnumerator()){  
+    $totalCPUval = $entry.Value + $hostCPUUserHash[$entry.Name] + $hostCPUOtherHash[$entry.Name]
     $hostTotalCPUHash.Add($entry.Key, $totalCPUval)
     }
 
 #CPULoad15min
 $hostCPULoad15mHash=@{}
 foreach ($cpuLoad15m in $hostCPULoad15m.result.data){
-    $hostCPULoad15mHash.Add($cpuLoad15m.dimensions, [math]::Round($($cpuLoad15m.values), 2))
+    $hostCPULoad15mHash.Add($($cpuLoad15m.dimensions), [math]::Round($($cpuLoad15m.values), 2))
     }
 
 
@@ -122,9 +120,7 @@ foreach ($property in $hostDisk.dataResult.dataPoints.PSObject.Properties){
 #Disk-AvailableSpace Hash
 $hostOptDiskFreeHash=@{}
 foreach ($disk in $hostOptDiskIdHash.GetEnumerator()){
-    Foreach ($Key in ($hostOptDiskHash.GetEnumerator() | Where-Object {$_.Key -match $disk.Name})){
-        $hostOptDiskFreeHash.Add(($Key.Name -split ',')[0],[math]::Round((($Key.Value -split ' ')[1])/ 1gb, 2))
-    }
+    $hostOptDiskFreeHash.Add(($disk.Key -split ',')[0],[math]::Round((($hostOptDiskHash[$disk.Key] -split ' ')[1])/ 1gb, 2))
 }
 
 #
@@ -139,39 +135,29 @@ $hostVarDiskHash=@{}
 Foreach ($property in $hostDisk.dataResult.dataPoints.PSObject.Properties){
     $hostVarDiskHash[$property.Name] = $property.Value
     }
+
 #Disk-AvailableSpace Hash
 $hostVarDiskFreeHash=@{}
 Foreach ($disk in $hostVarDiskIdHash.GetEnumerator()){
-  Foreach ($Key in ($hostVarDiskHash.GetEnumerator() | Where-Object {$_.Key -match $disk.Name})){
-      $hostVarDiskFreeHash.Add(($Key.Name -split ',')[0],[math]::Round((($Key.Value -split ' ')[1])/ 1gb, 2))
-      }
+    $hostVarDiskFreeHash.Add(($Key.Name -split ',')[0],[math]::Round((($hostVarDiskHash[$disk.Key] -split ' ')[1])/ 1gb, 2))
   }
 
 ###################
 #     REPORT
 ###################
 $report=@()
-foreach ($monitoredHost in $hostListHash.GetEnumerator()){
-    Foreach ($KeyA in ($hostTotalCPUHash.GetEnumerator() | Where-Object {$_.Name -eq $monitoredHost.Name})){$cpu =$KeyA.Value}
-    Foreach ($KeyB in ($hostMemoryHash.GetEnumerator() | Where-Object {$_.Name -eq $monitoredHost.Name})){$memory =$KeyB.Value}
-    Foreach ($KeyC in ($hostOptDiskFreeHash.GetEnumerator() | Where-Object {$_.Name -eq $monitoredHost.Name})){$optFeeDisk =$KeyC.Value}
-    Foreach ($KeyD in ($hostVarDiskFreeHash.GetEnumerator() | Where-Object {$_.Name -eq $monitoredHost.Name})){$varFreeDisk =$KeyD.Value}
-    Foreach ($KeyE in ($hostGroupHash.GetEnumerator() | Where-Object {$_.Name -eq $monitoredHost.Name})){$hostGroupName =$KeyE.Value}
-    Foreach ($KeyF in ($hostOneAgentVersionHash.GetEnumerator() | Where-Object {$_.Name -eq $monitoredHost.Name})){$hostOneAgentVersion =$KeyF.Value}
-    Foreach ($KeyG in ($hostCPUSystemHash.GetEnumerator() | Where-Object {$_.Name -eq $monitoredHost.Name})){$hostCPULoad15minVal =$KeyG.Value}
-
-    
+foreach ($monitoredHost in $hostListHash.GetEnumerator()){    
   
     $TargetObject = New-Object PSObject -Property @{ 'Host-id' =$monitoredHost.Name;
                                                      'Name' = $monitoredHost.Value;
-                                                     'HostGroup' = $hostGroupName;
-                                                     'OneAgent_Version' = $hostOneAgentVersion;
-                                                     'CPU_Usage(%)' = $cpu ;
-                                                     'CPU_Load_15min' = $hostCPULoad15minVal;
-                                                     'Memory_Usage(%)' = $memory ;
-                                                     'Opt_Disk_Available(GB)' = $optFeeDisk ;
-                                                     'Var_Disk_Available(GB)' = $varFreeDisk }
+                                                     'HostGroup' = $hostGroupHash[$monitoredHost.Name];
+                                                     'OneAgent_Version' = $hostOneAgentVersionHash[$monitoredHost.Name];
+                                                     'CPU_Usage(%)' = $hostTotalCPUHash[$monitoredHost.Name] ;
+                                                     'CPU_Load_15min' = $hostCPULoad15mHash[$monitoredHost.Name];
+                                                     'Memory_Usage(%)' = $hostMemoryHash[$monitoredHost.Name];
+                                                     'Opt_Disk_Available(GB)' = $hostOptDiskFreeHash[$monitoredHost.Name] ;
+                                                     'Var_Disk_Available(GB)' = $hostVarDiskFreeHash[$monitoredHost.Name] }
     $report +=  $TargetObject
     }
 
-$report | Select 'Host-id', 'Name', 'HostGroup', 'CPU_Usage(%)', 'CPU_Load_15min', 'Memory_Usage(%)', 'Opt_Disk_Available(GB)', 'Var_Disk_Available(GB)'   | Export-Csv -Path $report_csv_path
+$report | Select 'Host-id', 'Name', 'HostGroup', 'OneAgent_Version', 'CPU_Usage(%)', 'CPU_Load_15min', 'Memory_Usage(%)', 'Opt_Disk_Available(GB)', 'Var_Disk_Available(GB)'   | Export-Csv -Path $report_csv_path
