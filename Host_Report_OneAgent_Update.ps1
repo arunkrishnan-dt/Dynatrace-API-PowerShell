@@ -19,6 +19,10 @@ $dt_api_token = "<your-api-token>"
 $report_csv_path = "<your-csv-path>"
 
 
+$disk1='/opt/dynatrace'
+$disk2='/var'
+
+
 # NOTE: Filter below API calls with ManagementZones/HostGroups where available
 $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
 $headers.Add("Authorization", "Api-Token "+ $dt_api_token)
@@ -31,32 +35,7 @@ $hostDisk = Invoke-RestMethod $dt_tenancy'/api/v1/timeseries/com.dynatrace.built
 $hostCPULoad15m = Invoke-RestMethod $dt_tenancy'/api/v2/metrics/query?metricSelector=builtin:host.cpu.load15m&resolution=Inf&from=now-15m' -Method 'GET' -Headers $headers -Body $body
 
 
-###############
-#    HOST
-###############
-
-#Put Host Id - Host Display Name in a HashMap
-$hostListHash=@{}
-foreach ($h in $hostList){
-    $hostListHash.Add($h.entityId, $h.displayName)
-    }
-
-$hostGroupHash=@{}
-foreach ($h in $hostList){
-    $hostGroupHash.Add($h.entityId, $h.hostGroup.name)
-    }
-
-$hostOneAgentVersionHash=@{}
-foreach ($h in $hostList){
-    $hostOneAgentVersionHash.Add($h.entityId, $($h.agentVersion.major).ToString()+'.'+$($h.agentVersion.minor).ToString()+'.'+$($h.agentVersion.revision).ToString())
-    }
-
 $EpochStart = Get-Date 1970-01-01T12:00:00
-$hostLastSeenHash=@{}
-foreach ($h in $hostList){
-    $dateTime=$EpochStart.AddMilliseconds($h.lastSeenTimestamp)    
-    $hostLastSeenHash.Add($h.entityId, $dateTime )
-    }
 
 ###################
 #       CPU
@@ -92,7 +71,6 @@ foreach ($cpuLoad15m in $hostCPULoad15m.result.data){
     $hostCPULoad15mHash.Add($($cpuLoad15m.dimensions), [math]::Round($($cpuLoad15m.values), 2))
     }
 
-
 ###################
 #       Memory
 ##################
@@ -111,11 +89,11 @@ foreach ($property in $hostDisk.dataResult.entities.PSObject.Properties){
     $enityIdhash[$property.Name] = $property.Value
     }
 #
-# /opt/dynatrace
+# $disk1
 #
 #Ids of disk that we care about
 $hostOptDiskIdHash=@{}
-Foreach ($Key in ($enityIdhash.GetEnumerator() | Where-Object {$_.Value -eq "/opt/dynatrace"})){
+Foreach ($Key in ($enityIdhash.GetEnumerator() | Where-Object {$_.Value -eq $disk1})){
     $hostOptDiskIdHash.Add($Key.name, $Key.Value)
     }
 
@@ -131,10 +109,10 @@ foreach ($disk in $hostOptDiskIdHash.GetEnumerator()){
 }
 
 #
-# /var
+# $disk2
 #
 $hostVarDiskIdHash=@{}
-Foreach ($Key in ($enityIdhash.GetEnumerator() | Where-Object {$_.Value -eq "/var"})){
+Foreach ($Key in ($enityIdhash.GetEnumerator() | Where-Object {$_.Value -eq $disk2})){
     $hostVarDiskIdHash.Add($Key.name, $Key.Value)
     }
 
@@ -152,20 +130,26 @@ Foreach ($disk in $hostVarDiskIdHash.GetEnumerator()){
 ###################
 #     REPORT
 ###################
+
+# $report | Select 'Host-id', 'Name', 'HostGroup', 'OneAgent_Version', 'CPU_Usage(%)', 'CPU_Load_15min', 'Memory_Usage(%)', 'Opt_Disk_Available(GB)', 'Var_Disk_Available(GB)', 'Host_Last_Seen(DateTime)'   | Export-Csv -Path $report_csv_path
+
 $report=@()
-foreach ($monitoredHost in $hostListHash.GetEnumerator()){    
-  
-    $TargetObject = New-Object PSObject -Property @{ 'Host-id' =$monitoredHost.Name;
-                                                     'Name' = $monitoredHost.Value;
-                                                     'HostGroup' = $hostGroupHash[$monitoredHost.Name];
-                                                     'OneAgent_Version' = $hostOneAgentVersionHash[$monitoredHost.Name];
-                                                     'CPU_Usage(%)' = $hostTotalCPUHash[$monitoredHost.Name] ;
-                                                     'CPU_Load_15min' = $hostCPULoad15mHash[$monitoredHost.Name];
-                                                     'Memory_Usage(%)' = $hostMemoryHash[$monitoredHost.Name];
-                                                     'Opt_Disk_Available(GB)' = $hostOptDiskFreeHash[$monitoredHost.Name] ;
-                                                     'Var_Disk_Available(GB)' = $hostVarDiskFreeHash[$monitoredHost.Name];
-                                                     'Host_Last_Seen(DateTime)' = $hostLastSeenHash[$monitoredHost.Name] }
+foreach ($item in $hostList){
+    
+    $TargetObject=[PSCustomObject]@{
+        Host_id =$item.entityId;
+        Name = $item.displayName;
+        HostGroup = $item.hostGroup.name;
+        OneAgent_Version = '$($item.agentVersion.major).ToString()+'.'+$($item.agentVersion.minor).ToString()+'.'+$($item.agentVersion.revision).ToString()';
+        'CPU_Usage(%)' = $hostTotalCPUHash[$item.entityId] ;
+        CPU_Load_15min = $hostCPULoad15mHash[$item.entityId];
+        'Memory_Usage(%)' = $hostMemoryHash[$item.entityId];
+        'Opt_Disk_Available(GB)' = $hostOptDiskFreeHash[$item.entityId] ;
+        'Var_Disk_Available(GB)' = $hostVarDiskFreeHash[$item.entityId];
+        'Host_Last_Seen(Date/Time)' = $EpochStart.AddMilliseconds($item.lastSeenTimestamp)
+    }  
+   
     $report +=  $TargetObject
     }
-
-$report | Select 'Host-id', 'Name', 'HostGroup', 'OneAgent_Version', 'CPU_Usage(%)', 'CPU_Load_15min', 'Memory_Usage(%)', 'Opt_Disk_Available(GB)', 'Var_Disk_Available(GB)', 'Host_Last_Seen(DateTime)'   | Export-Csv -Path $report_csv_path
+    
+$report | Export-Csv -Path $report_csv_path
