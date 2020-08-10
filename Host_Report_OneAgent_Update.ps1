@@ -51,6 +51,13 @@ foreach ($h in $hostList){
     $hostOneAgentVersionHash.Add($h.entityId, $($h.agentVersion.major).ToString()+'.'+$($h.agentVersion.minor).ToString()+'.'+$($h.agentVersion.revision).ToString())
     }
 
+$EpochStart = Get-Date 1970-01-01T12:00:00
+$hostLastSeenHash=@{}
+foreach ($h in $hostList){
+    $dateTime=$EpochStart.AddMilliseconds($h.lastSeenTimestamp)    
+    $hostLastSeenHash.Add($h.entityId, $dateTime )
+    }
+
 ###################
 #       CPU
 ##################
@@ -156,8 +163,9 @@ foreach ($monitoredHost in $hostListHash.GetEnumerator()){
                                                      'CPU_Load_15min' = $hostCPULoad15mHash[$monitoredHost.Name];
                                                      'Memory_Usage(%)' = $hostMemoryHash[$monitoredHost.Name];
                                                      'Opt_Disk_Available(GB)' = $hostOptDiskFreeHash[$monitoredHost.Name] ;
-                                                     'Var_Disk_Available(GB)' = $hostVarDiskFreeHash[$monitoredHost.Name] }
+                                                     'Var_Disk_Available(GB)' = $hostVarDiskFreeHash[$monitoredHost.Name];
+                                                     'Host_Last_Seen(DateTime)' = $hostLastSeenHash[$monitoredHost.Name] }
     $report +=  $TargetObject
     }
 
-$report | Select 'Host-id', 'Name', 'HostGroup', 'OneAgent_Version', 'CPU_Usage(%)', 'CPU_Load_15min', 'Memory_Usage(%)', 'Opt_Disk_Available(GB)', 'Var_Disk_Available(GB)'   | Export-Csv -Path $report_csv_path
+$report | Select 'Host-id', 'Name', 'HostGroup', 'OneAgent_Version', 'CPU_Usage(%)', 'CPU_Load_15min', 'Memory_Usage(%)', 'Opt_Disk_Available(GB)', 'Var_Disk_Available(GB)', 'Host_Last_Seen(DateTime)'   | Export-Csv -Path $report_csv_path
