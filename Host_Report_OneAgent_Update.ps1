@@ -131,8 +131,6 @@ Foreach ($disk in $hostVarDiskIdHash.GetEnumerator()){
 #     REPORT
 ###################
 
-# $report | Select 'Host-id', 'Name', 'HostGroup', 'OneAgent_Version', 'CPU_Usage(%)', 'CPU_Load_15min', 'Memory_Usage(%)', 'Opt_Disk_Available(GB)', 'Var_Disk_Available(GB)', 'Host_Last_Seen(DateTime)'   | Export-Csv -Path $report_csv_path
-
 $report=@()
 foreach ($item in $hostList){
     
