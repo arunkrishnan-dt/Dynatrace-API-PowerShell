@@ -20,8 +20,8 @@ $dt_tenancy = "https://xxxxxx.live.dynatrace.com"
 $dt_api_token = "<your-api-token>"
 $report_csv_path = "<your-csv-path>"
 
-$disk1='/'
-$disk2='/boot'
+$disk1='/opt/dynatrace'
+$disk2='/var'
 
 #Headers
 $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
