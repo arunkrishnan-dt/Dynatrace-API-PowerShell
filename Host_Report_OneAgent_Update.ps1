@@ -18,13 +18,15 @@ $dt_tenancy = "https://xxxxxx.live.dynatrace.com"
 $dt_api_token = "<your-api-token>"
 $report_csv_path = "<your-csv-path>"
 
-$disk1='/opt/dynatrace'
-$disk2='/var'
+$disk1='/'
+$disk2='/boot'
 
-
-# NOTE: Filter below API calls with ManagementZones/HostGroups where available
+#Headers
 $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
 $headers.Add("Authorization", "Api-Token "+ $dt_api_token)
+
+#API Calls
+# NOTE: Filter below API calls with ManagementZones/HostGroups where available
 $hostList = Invoke-RestMethod $dt_tenancy'/api/v1/entity/infrastructure/hosts?relateiveTime=2hours&includeDetails=true&showMonitoringCandidates=false' -Method 'GET' -Headers $headers -Body $body
 $hostCPUSystem = Invoke-RestMethod $dt_tenancy'/api/v1/timeseries/com.dynatrace.builtin:host.cpu.system?includeData=true&aggregationType=AVG&relativeTime=10mins&queryMode=TOTAL' -Method 'GET' -Headers $headers -Body $body
 $hostCPUUser = Invoke-RestMethod $dt_tenancy'/api/v1/timeseries/com.dynatrace.builtin:host.cpu.user?includeData=true&aggregationType=AVG&relativeTime=10mins&queryMode=TOTAL' -Method 'GET' -Headers $headers -Body $body
@@ -96,30 +98,30 @@ foreach ($property in $hostDisk.dataResult.dataPoints.PSObject.Properties){
 # $disk1
 #
 #Ids of disk that we care about
-$hostOptDiskIdHash=@{}
+$hostDisk1IdHash=@{}
 Foreach ($Key in ($hostDiskIdHash.GetEnumerator() | Where-Object {$_.Value -eq $disk1})){
-    $hostOptDiskIdHash.Add($Key.name, $Key.Value)
+    $hostDisk1IdHash.Add($Key.name, $Key.Value)
     }
 
-$hostOptDiskAvailableHash=@{}
-foreach ($entry in $hostOptDiskIdHash.GetEnumerator()){
+$hostDisk1AvailableHash=@{}
+foreach ($entry in $hostDisk1IdHash.GetEnumerator()){
     foreach ($item in ($hostDiskAvailableHash.GetEnumerator() | Where-Object {$_.Key -match $entry.Name})) {
-        $hostOptDiskAvailableHash.Add(($item.Name -split ',')[0],[math]::Round((($item.Value -split ' ')[1])/ 1gb, 2))
+        $hostDisk1AvailableHash.Add(($item.Name -split ',')[0],[math]::Round((($item.Value -split ' ')[1])/ 1gb, 2))
         }
     
     }
 #
 # $disk2
 #
-$hostVarDiskIdHash=@{}
+$hostDisk2IdHash=@{}
 Foreach ($Key in ($hostDiskIdHash.GetEnumerator() | Where-Object {$_.Value -eq $disk2})){
-    $hostVarDiskIdHash.Add($Key.name, $Key.Value)
+    $hostDisk2IdHash.Add($Key.name, $Key.Value)
     }
 
-$hostVarDiskAvailableHash=@{}
-foreach ($entry in $hostVarDiskIdHash.GetEnumerator()){
+$hostDisk2AvailableHash=@{}
+foreach ($entry in $hostDisk2IdHash.GetEnumerator()){
     foreach ($item in ($hostDiskAvailableHash.GetEnumerator() | Where-Object {$_.Key -match $entry.Name})) {
-        $hostVarDiskAvailableHash.Add(($item.Name -split ',')[0],[math]::Round((($item.Value -split ' ')[1])/ 1gb, 2))
+        $hostDisk2AvailableHash.Add(($item.Name -split ',')[0],[math]::Round((($item.Value -split ' ')[1])/ 1gb, 2))
         }
     
     }
@@ -135,12 +137,12 @@ foreach ($item in $hostList){
         Host_id =$item.entityId;
         Name = $item.displayName;
         HostGroup = $item.hostGroup.name;
-        OneAgent_Version = '$($item.agentVersion.major).ToString()+'.'+$($item.agentVersion.minor).ToString()+'.'+$($item.agentVersion.revision).ToString()';
+        OneAgent_Version = $($item.agentVersion.major).ToString()+'.'+$($item.agentVersion.minor).ToString()+'.'+$($item.agentVersion.revision).ToString();
         'CPU_Usage(%)' = $hostTotalCPUHash[$item.entityId] ;
         CPU_Load_15min = $hostCPULoad15mHash[$item.entityId];
         'Memory_Usage(%)' = $hostMemoryHash[$item.entityId];
-        'Opt_Disk_Available(GB)' = $hostOptDiskAvailableHash[$item.entityId] ;
-        'Var_Disk_Available(GB)' = $hostVarDiskAvailableHash[$item.entityId];
+        "$disk1-Available(GB)" = $hostDisk1AvailableHash[$item.entityId] ;
+        "$disk2-Available(GB)" = $hostDisk2AvailableHash[$item.entityId];
         'Host_Last_Seen(Date/Time)' = $EpochStart.AddMilliseconds($item.lastSeenTimestamp)
     }  
    
