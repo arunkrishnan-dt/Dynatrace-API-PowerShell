@@ -18,9 +18,8 @@ $dt_tenancy = "https://xxxxxx.live.dynatrace.com"
 $dt_api_token = "<your-api-token>"
 $report_csv_path = "<your-csv-path>"
 
-
-$disk1='/opt/dynatrace'
-$disk2='/var'
+$disk1='/tmp'
+$disk2='/dynatrace'
 
 
 # NOTE: Filter below API calls with ManagementZones/HostGroups where available
@@ -84,48 +83,46 @@ foreach ($memory in $hostMemory.dataResult.dataPoints.PSObject.Properties){
 #       Disk
 ##################
 
-$enityIdhash=@{}
+$hostDiskIdHash=@{}
 foreach ($property in $hostDisk.dataResult.entities.PSObject.Properties){
-    $enityIdhash[$property.Name] = $property.Value
+    $hostDiskIdHash[$property.Name] = $property.Value
     }
+$hostDiskAvailableHash=@{}
+foreach ($property in $hostDisk.dataResult.dataPoints.PSObject.Properties){
+    $hostDiskAvailableHash[$property.Name] = $property.Value
+    }
+
 #
 # $disk1
 #
 #Ids of disk that we care about
 $hostOptDiskIdHash=@{}
-Foreach ($Key in ($enityIdhash.GetEnumerator() | Where-Object {$_.Value -eq $disk1})){
+Foreach ($Key in ($hostDiskIdHash.GetEnumerator() | Where-Object {$_.Value -eq $disk1})){
     $hostOptDiskIdHash.Add($Key.name, $Key.Value)
     }
 
-$hostOptDiskHash=@{}
-foreach ($property in $hostDisk.dataResult.dataPoints.PSObject.Properties){
-    $hostOptDiskHash[$property.Name] = $property.Value
+$hostOptDiskAvailableHash=@{}
+foreach ($entry in $hostOptDiskIdHash.GetEnumerator()){
+    foreach ($item in ($hostDiskAvailableHash.GetEnumerator() | Where-Object {$_.Key -match $entry.Name})) {
+        $hostOptDiskAvailableHash.Add(($item.Name -split ',')[0],[math]::Round((($item.Value -split ' ')[1])/ 1gb, 2))
+        }
+    
     }
-
-#Disk-AvailableSpace Hash
-$hostOptDiskFreeHash=@{}
-foreach ($disk in $hostOptDiskIdHash.GetEnumerator()){
-    $hostOptDiskFreeHash.Add(($disk.Key -split ',')[0],[math]::Round((($hostOptDiskHash[$disk.Key] -split ' ')[1])/ 1gb, 2))
-}
-
 #
 # $disk2
 #
 $hostVarDiskIdHash=@{}
-Foreach ($Key in ($enityIdhash.GetEnumerator() | Where-Object {$_.Value -eq $disk2})){
+Foreach ($Key in ($hostDiskIdHash.GetEnumerator() | Where-Object {$_.Value -eq $disk2})){
     $hostVarDiskIdHash.Add($Key.name, $Key.Value)
     }
 
-$hostVarDiskHash=@{}
-Foreach ($property in $hostDisk.dataResult.dataPoints.PSObject.Properties){
-    $hostVarDiskHash[$property.Name] = $property.Value
+$hostVarDiskAvailableHash=@{}
+foreach ($entry in $hostVarDiskIdHash.GetEnumerator()){
+    foreach ($item in ($hostDiskAvailableHash.GetEnumerator() | Where-Object {$_.Key -match $entry.Name})) {
+        $hostVarDiskAvailableHash.Add(($item.Name -split ',')[0],[math]::Round((($item.Value -split ' ')[1])/ 1gb, 2))
+        }
+    
     }
-
-#Disk-AvailableSpace Hash
-$hostVarDiskFreeHash=@{}
-Foreach ($disk in $hostVarDiskIdHash.GetEnumerator()){
-    $hostVarDiskFreeHash.Add(($Key.Name -split ',')[0],[math]::Round((($hostVarDiskHash[$disk.Key] -split ' ')[1])/ 1gb, 2))
-  }
 
 ###################
 #     REPORT
@@ -142,8 +139,8 @@ foreach ($item in $hostList){
         'CPU_Usage(%)' = $hostTotalCPUHash[$item.entityId] ;
         CPU_Load_15min = $hostCPULoad15mHash[$item.entityId];
         'Memory_Usage(%)' = $hostMemoryHash[$item.entityId];
-        'Opt_Disk_Available(GB)' = $hostOptDiskFreeHash[$item.entityId] ;
-        'Var_Disk_Available(GB)' = $hostVarDiskFreeHash[$item.entityId];
+        'Opt_Disk_Available(GB)' = $hostOptDiskAvailableHash[$item.entityId] ;
+        'Var_Disk_Available(GB)' = $hostVarDiskAvailableHash[$item.entityId];
         'Host_Last_Seen(Date/Time)' = $EpochStart.AddMilliseconds($item.lastSeenTimestamp)
     }  
    
