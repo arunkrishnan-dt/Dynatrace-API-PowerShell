@@ -18,8 +18,8 @@ $dt_tenancy = "https://xxxxxx.live.dynatrace.com"
 $dt_api_token = "<your-api-token>"
 $report_csv_path = "<your-csv-path>"
 
-$disk1='/tmp'
-$disk2='/dynatrace'
+$disk1='/opt/dynatrace'
+$disk2='/var'
 
 
 # NOTE: Filter below API calls with ManagementZones/HostGroups where available
