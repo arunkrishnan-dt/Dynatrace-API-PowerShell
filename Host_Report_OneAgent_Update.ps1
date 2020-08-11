@@ -5,11 +5,13 @@
 # 'Host-id', 
 # 'Name', 
 # 'HostGroup',
+# 'OneAgent_Version'
 # 'CPU_Usage(%)',
 # 'CPU_Load_15min',
 # 'Memory_Usage(%)',
-# 'Opt_Disk_Available(GB)',
-# 'Var_Disk_Available(GB)'  
+# 'Disk1-Available(GB)',
+# 'Disk2-Available(GB)'  
+# 'Host_Last_Seen(Date/Time)'
 #
 # Aggregation: AVG over last 10mins             
 # 
